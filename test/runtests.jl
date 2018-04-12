@@ -1,4 +1,3 @@
-using Revise
 using Conv
 using Base.Test
 
