@@ -239,6 +239,9 @@ function pad_truncate!{T}(
 end
 
 
+"""
+Parameters to generate all possible cross-correlations
+"""
 mutable struct Param_xcorr
 	paconv::Conv.Param{Float64,1}
 	iref::Vector{Int64}
@@ -260,7 +263,7 @@ function xcorr(A::AbstractArray{Float64}; lags=[size(A,1)-1, size(A,1)-1], iref=
 	if(iref==0)
 		iref=1:nr
 	end
-	Ax=[zeros(sum(lags)+1, nr) for i in 1:length(iref)]
+	Ax=[zeros(sum(lags)+1, nr-iref[i]+1) for i in 1:length(iref)]
 
 	nt=size(A,1)
 	ntwav=sum(lags)+1
@@ -283,7 +286,7 @@ function xcorr!(Ax, A::AbstractArray{Float64}, pa)
 	lags=pa.paconv.wavlags
 	norm_flag=pa.norm_flag
 
-	any([(size(Ax[ir]) ≠ (sum(lags)+1,nr)) for ir in 1:length(Ax)]) && error("size Ax")
+	any([(size(Ax[ir]) ≠ (sum(lags)+1,nr-ir+1)) for ir in pa.iref]) && error("size Ax")
 
 
 	irrr=0
@@ -303,17 +306,17 @@ function xcorr!(Ax, A::AbstractArray{Float64}, pa)
 			end
 			α = (iszero(α)) ? 1.0 : inv(α) # take inverse if not zero
 		end
-		for ir2 in 1:nr
+		for (iir2,ir2) in enumerate(ir:nr)
 			for i in 1:nt
 				pa.paconv.gf[i]=A[i,ir2]
 			end
 			mod!(pa.paconv, :wav)
 			for i in 1:ntwav
-				Axx[i,ir2]=pa.paconv.wav[i]
+				Axx[i,iir2]=pa.paconv.wav[i]
 			end
 			if(norm_flag) 
 				for i in 1:ntwav
-					Axx[i,ir2]/=α
+					Axx[i,iir2]/=α
 				end
 			end
 		end
