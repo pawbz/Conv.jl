@@ -5,7 +5,6 @@ This module is used in DeConv, ConvMix and Coupling
 """
 module Conv
 
-using DSP
 
 """
 Model : d = convolution(gf, wav)
