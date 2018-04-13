@@ -1,6 +1,6 @@
 using Conv
 using Base.Test
-using BenchMarkTools
+using BenchmarkTools
 
 np=1000
 n=777
