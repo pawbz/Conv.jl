@@ -27,7 +27,6 @@ git:
 
 ## uncomment the following lines to override the default test script
 #script:
-  - julia -e 'Pkg.add("DSP")'
   - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("Conv"); Pkg.test("Conv"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
