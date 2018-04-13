@@ -5,6 +5,7 @@ This module is used in DeConv, ConvMix and Coupling
 """
 module Conv
 
+using DSP.nextfastfft
 
 """
 Model : d = convolution(gf, wav)
