@@ -4,6 +4,7 @@ __precompile__()
 This module is used in DeConv, ConvMix and Coupling
 """
 module Conv
+using FFTW
 
 using DSP.nextfastfft
 
@@ -26,8 +27,8 @@ type Param{T<:Real,N}
 	dfreq::Array{Complex{T},N}
 	gffreq::Array{Complex{T},N}
 	wavfreq::Array{Complex{T},N}
-	fftplan::Base.DFT.FFTW.rFFTWPlan
-	ifftplan::Base.DFT.ScaledPlan
+	fftplan::FFTW.rFFTWPlan
+	ifftplan::FFTW.Plan
 	"+ve and -ve lags of gf"
 	gflags::Vector{Int}
 	"+ve and -ve lags of wav"
