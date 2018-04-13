@@ -85,8 +85,8 @@ function Param(;ntwav=1, ntgf=1, ntd=1, dims=(),
 
 	FFTW.set_num_threads(Sys.CPU_CORES)
 	nrfft=div(np2,2)+1
-	fftplan=plan_rfft(zeros(T, np2,dims...),[1], flags=FFTW.MEASURE)
-	ifftplan=plan_irfft(complex.(zeros(T, nrfft,dims...)),np2,[1], flags=FFTW.MEASURE)
+	fftplan=plan_rfft(zeros(T, np2,dims...),[1], flags=FFTW.MEASURE,  timelimit=Inf)
+	ifftplan=plan_irfft(complex.(zeros(T, nrfft,dims...)),np2,[1], flags=FFTW.MEASURE,  timelimit=Inf)
 
 	# preallocate freq domain vectors after rfft
 	dfreq=complex.(zeros(T,nrfft,dims...))
