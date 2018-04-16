@@ -367,7 +367,7 @@ function Param_xcorr(nt::Int64, iref, nts::Int64=2*nt-1, lags=nothing; norm_flag
 	s=zeros(nts);
 	g=zeros(nt);
 	d=zeros(nt);
-	paconv=Param(ntg=nt, ntd=nt, nts=nts, g=g, s=s, d=d, slags=lags)
+	paconv=Param(gsize=[nt], dsize=[nt], ssize=[nts], g=g, s=s, d=d, slags=lags)
 	pa=Param_xcorr(paconv, collect(iref), norm_flag)
 	return pa
 end
