@@ -14,6 +14,12 @@ z = zeros(np,n2);
 	Conv.pad_truncate!(xa, z, n-i-1,i,np,-1)
 	@test x ≈ xa
 end
+i=4
+println("testing memory for pad truncates...")
+@btime Conv.pad_truncate!(x, z, n-i-1,i,np,1)
+@btime Conv.pad_truncate!(xa, z, n-i-1,i,np,-1)
+println("...")
+
 
 np=1000
 n=777
@@ -24,6 +30,12 @@ z = zeros(np);
 	Conv.pad_truncate!(xa, z, n-i-1,i,np,-1)
 	@test x ≈ xa
 end
+i=4
+println("testing memory for pad truncates...")
+@btime Conv.pad_truncate!(x, z, n-i-1,i,np,1)
+@btime Conv.pad_truncate!(xa, z, n-i-1,i,np,-1)
+println("...")
+
 
 
 # fast_filt
@@ -36,16 +48,15 @@ for nw in [7, 8], nr in [20, 10], ns in [11, 10]
 	r[5]=1.; w[3]=1.;
 
 	Conv.mod!(s,r,w,:d)
-	Conv.mod!(s,r,wa,:wav)
+	Conv.mod!(s,r,wa,:s)
 	@test w ≈ wa
 
-	Conv.mod!(s,ra,w,:gf)
+	Conv.mod!(s,ra,w,:g)
 	@test ra ≈ r
 
 	Conv.mod!(sa,ra,wa,:d)
 	@test sa ≈ s
 end
-
 
 
 ## dot product test for fast filt
@@ -64,7 +75,7 @@ function filt_loop(func, n2; )
 
 		sa=randn(ns, n2...);
 		ra=similar(r)
-		func(sa,ra,w,:gf)
+		func(sa,ra,w,:g)
 
 		# dot product test
 		@test dot(s, sa) ≈ dot(ra, r)
@@ -72,12 +83,12 @@ function filt_loop(func, n2; )
 		r=randn(nr, n2...)
 		s=randn(ns, n2...)
 		w=zeros(nw, n2...)
-		func(s,r,w,:wav)
+		func(s,r,w,:s)
 
 
 		wa=randn(nw, n2...);
 		ra=similar(r);
-		func(s,ra,wa,:gf)
+		func(s,ra,wa,:g)
 
 		# dot product test
 		@test dot(r, ra) ≈ dot(wa, w)
@@ -94,12 +105,36 @@ using BenchmarkTools
 n=10000
 nr=1
 println("====================")
+d=randn(n,nr)
+g=randn(n,nr)
 s=randn(n,nr)
-r=randn(n,nr)
-w=randn(n,nr)
-pa=Conv.Param(d=s,gf=r,wav=w, ntgf=n, ntd=n, ntwav=n);
+pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 
 @btime Conv.mod!(pa, :d);
-@btime Conv.mod!(pa, :d, d=s, gf=r);
-@btime Conv.mod!(pa, :gf);
-@btime Conv.mod!(pa, :wav);
+@btime Conv.mod!(pa, :d, d=d, g=g);
+@btime Conv.mod!(pa, :g);
+@btime Conv.mod!(pa, :s);
+
+n=1000
+nr=100
+println("====================")
+d=randn(n,nr)
+g=randn(n,nr)
+s=randn(n)
+pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n]);
+
+@btime Conv.mod!(pa, :d);
+@btime Conv.mod!(pa, :d, d=d, g=g);
+@btime Conv.mod!(pa, :g);
+@btime Conv.mod!(pa, :s);
+
+println("====================")
+d=randn(n,nr)
+g=randn(n,nr)
+s=randn(n,nr)
+pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
+
+@btime Conv.mod!(pa, :d);
+@btime Conv.mod!(pa, :d, d=d, g=g);
+@btime Conv.mod!(pa, :g);
+@btime Conv.mod!(pa, :s);
