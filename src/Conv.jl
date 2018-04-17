@@ -430,7 +430,7 @@ function xcorr!(Ax, A::AbstractArray{Float64}, pa)
 			end
 			if(norm_flag) 
 				for i in 1:nts
-					Axx[i,iir2]/=α
+					Axx[i,iir2]*=α
 				end
 			end
 		end
