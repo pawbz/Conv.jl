@@ -454,13 +454,13 @@ function xcorr_grad!(dA::AbstractArray{Float64}, dAx, A::AbstractArray{Float64},
 		ir1+=1
 		dAxx=dAx[ir1]
 
-		for ir2 in 1:nr
+		for (iir2,ir2) in enumerate(ir:nr)
 
 			for i in 1:nt
 				pa.paconv.g[i]=A[i,ir2]
 			end
 			for i in 1:nts
-				pa.paconv.s[i]=dAxx[i,ir2]
+				pa.paconv.s[i]=dAxx[i,iir2]
 			end
 
 			mod!(pa.paconv, :d) # check
@@ -474,9 +474,9 @@ function xcorr_grad!(dA::AbstractArray{Float64}, dAx, A::AbstractArray{Float64},
 			pa.paconv.d[i]=A[i,ir]
 		end
 
-		for ir2 in 1:nr
+		for (iir2,ir2) in enumerate(ir:nr)
 			for i in 1:nts
-				pa.paconv.s[i]=dAxx[i,ir2]
+				pa.paconv.s[i]=dAxx[i,iir2]
 			end
 
 			mod!(pa.paconv, :g) # check
