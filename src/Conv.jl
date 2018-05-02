@@ -489,4 +489,31 @@ function xcorr_grad!(dA::AbstractArray{Float64}, dAx, A::AbstractArray{Float64},
 
 end
 
+
+"""
+Convert Array{Array{Float64,2},1} to 
+Array{Float64,2} and vice versa
+"""
+function Axmatrix!(Axmat, Ax, flag)
+	nr=length(Ax);
+	nt=size(Axmat,1)
+	
+
+	nrtot=0
+	for ir in 1:nr
+		nr1=nr-ir+1
+		for irr in 1:nr1
+			Axx=Ax[ir]
+			for it in 1:nt
+				if(flag==1)
+					Axx[it,irr]=Axmat[it, nrtot+irr]
+				elseif(flag==-1)
+					Axmat[it, nrtot+irr]=Axx[it,irr]
+				end
+			end
+		end
+		nrtot+=nr1
+	end
+end
+
 end
