@@ -7,12 +7,13 @@ module Conv
 using FFTW
 
 using DSP.nextfastfft
+using Misfits
 
 """
 Model : d = convolution(g, s)
 d, g and s can have arbitary +ve and -ve lags
 """
-type Param{T<:Real, Nd, Ng, Ns}
+type P_conv{T<:Real, Nd, Ng, Ns}
 	dsize::Vector{Int}
 	gsize::Vector{Int}
 	ssize::Vector{Int}
@@ -44,7 +45,7 @@ type Param{T<:Real, Nd, Ng, Ns}
 	ssum::Bool
 end
 
-function Base.fill!(pa::Param, k)
+function Base.fill!(pa::P_conv, k)
 	for iff in [:d, :g, :s]
 		m=getfield(pa,iff)
 		for i in eachindex(m)
@@ -55,7 +56,7 @@ end
 
 
 
-function Param(; 
+function P_conv(; 
 	       dsize::Vector{Int64}=[1],
 	       ssize::Vector{Int64}=[1],
 	       gsize::Vector{Int64}=[1],
@@ -156,7 +157,7 @@ function Param(;
 		end
 	end
 
-	pa=Param(dsize, gsize, ssize, np2, d, g, s, 
+	pa=P_conv(dsize, gsize, ssize, np2, d, g, s, 
 	  dpad, gpad, spad,
 	  dfreq, gfreq, sfreq, 
 	  dfftp, difftp, 
@@ -167,10 +168,10 @@ end
 
 
 """
-Convolution that allocates `Param` internally.
-Don,t use inside loops
+Convolution that allocates `P_conv` internally.
+Don't use inside loops, use `mod!` instead.
 """
-function mod!{T,Nd,Ng,Ns}(
+function conv!{T,Nd,Ng,Ns}(
 	   d::AbstractArray{T,Nd}, 
 	   g::AbstractArray{T,Ng},
 	   s::AbstractArray{T,Ns}, attrib::Symbol)
@@ -180,7 +181,7 @@ function mod!{T,Nd,Ng,Ns}(
 	ssize=[size(s)...]
 
 	# allocation of freq matrices
-	pa=Param(dsize=dsize, ssize=ssize, gsize=gsize, g=g, s=s, d=d)
+	pa=P_conv(dsize=dsize, ssize=ssize, gsize=gsize, g=g, s=s, d=d)
 
 	# using pa, return d, g, s according to attrib
 	mod!(pa, attrib)
@@ -191,7 +192,7 @@ Convolution modelling with no allocations at all.
 By default, the fields `g`, `d` and `s` in pa are modified accordingly.
 Otherwise use keyword arguments to input them.
 """
-function mod!(pa::Param, attrib::Symbol; 
+function mod!(pa::P_conv, attrib::Symbol; 
 	      g=pa.g, d=pa.d, s=pa.s # external arrays to be modified
 	     )
 
@@ -289,231 +290,9 @@ function mod!(pa::Param, attrib::Symbol;
 	end
 end
 
+include("Pad.jl")
+include("Xcorr.jl")
+include("Misfits.jl")
 
-"""
-Method to perform zero padding and truncation.
-
-# Arguments
-
-* `x` : real signal with dimension nplag + nnlag + 1
-	first has decreasing negative lags, 
-	then has zero lag at nnlags + 1,
-	then has increasing positive nplags lags,
-	signal contains only positive lags and zero lag if nnlag=0 and vice versa
-* `xpow2` : npow2 real vector with dimension npow2
-* `nplags` : number of positive lags
-* `nnlags` : number of negative lags
-* `npow2` : number of samples in xpow2
-* `flag` : = 1 means xpow2 is returned using x
-	   = -1 means x is returned using xpow2
-"""
-function pad_truncate!{T}(
-				  x::AbstractArray{T}, 
-				  xpow2::AbstractArray{T}, 
-				  nplags::Integer, 
-				  nnlags::Integer, 
-				  npow2::Integer, 
-				  flag::Integer
-				  )
-	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
-	(size(xpow2,1) ≠ npow2) && error("size xpow2")
-
-	for id in 1:size(x,2)
-		if(flag == 1)
-			xpow2[1,id] = (x[nnlags+1,id]) # zero lag
-			# +ve lags
-			if (nplags > 0) 
-				for i=1:nplags
-					xpow2[i+1,id]= (x[nnlags+1+i,id])
-				end
-			end
-			# -ve lags
-			if(nnlags != 0) 
-				for i=1:nnlags
-					xpow2[npow2-i+1,id] =(x[nnlags+1-i,id])
-				end
-			end
-		elseif(flag == -1)
-			x[nnlags+1,id] = (xpow2[1,id]); # zero lag
-			if(nplags != 0) 
-				for i=1:nplags
-					x[nnlags+1+i,id] = (xpow2[1+i,id]);
-				end
-			end
-			if(nnlags != 0)
-				for i=1:nnlags
-					x[nnlags+1-i,id] = (xpow2[npow2-i+1,id])
-				end
-			end
-		else
-			error("invalid flag")
-		end
-	end
-	return nothing
-end
-
-
-"""
-Parameters to generate all possible cross-correlations
-"""
-mutable struct Param_xcorr
-	paconv::Conv.Param{Float64,1}
-	iref::Vector{Int64}
-	norm_flag::Bool
-end
-
-function Param_xcorr(nt::Int64, iref, nts::Int64=2*nt-1, lags=nothing; norm_flag=true)
-	(lags===nothing) && (lags=[nt-1, nt-1])
-	s=zeros(nts);
-	g=zeros(nt);
-	d=zeros(nt);
-	paconv=Param(gsize=[nt], dsize=[nt], ssize=[nts], g=g, s=s, d=d, slags=lags)
-	pa=Param_xcorr(paconv, collect(iref), norm_flag)
-	return pa
-end
-
-function xcorr(A::AbstractArray{Float64}; lags=[size(A,1)-1, size(A,1)-1], iref=0, norm_flag=true)
-	nr=size(A,2)
-	if(iref==0)
-		iref=1:nr
-	end
-	Ax=[zeros(sum(lags)+1, nr-iref[i]+1) for i in 1:length(iref)]
-
-	nt=size(A,1)
-	nts=sum(lags)+1
-	pa=Param_xcorr(nt, iref, nts, lags, norm_flag=norm_flag)
-
-	return xcorr!(Ax, A, pa)
-end
-
-
-"""
-Use first colomn of A and cross-correlate with rest of columns of it.
-And store results in Ax.
-After xcorr, the coeffcients are normalized with norm(A[:,1])
-By default, Ax has almost same positive and negative lags.
-"""
-function xcorr!(Ax, A::AbstractArray{Float64}, pa)
-
-	nr=size(A,2)
-	iref=pa.iref
-	lags=pa.paconv.slags
-	norm_flag=pa.norm_flag
-
-	any([(size(Ax[ir]) ≠ (sum(lags)+1,nr-ir+1)) for ir in pa.iref]) && error("size Ax")
-
-
-	irrr=0
-	α=0.0
-	nt=size(A,1)
-	nts=sum(lags)+1
-	ir1=0
-	for ir in iref
-		ir1+=1
-		Axx=Ax[ir1]
-		for i in 1:nt
-			pa.paconv.d[i]=A[i,ir]
-		end
-		if(ir1==1 && norm_flag) # save scale reference for first column only 
-			for i in 1:nt
-				α+=A[i,ir]*A[i,ir]
-			end
-			α = (iszero(α)) ? 1.0 : inv(α) # take inverse if not zero
-		end
-		for (iir2,ir2) in enumerate(ir:nr)
-			for i in 1:nt
-				pa.paconv.g[i]=A[i,ir2]
-			end
-			mod!(pa.paconv, :s)
-			for i in 1:nts
-				Axx[i,iir2]=pa.paconv.s[i]
-			end
-			if(norm_flag) 
-				for i in 1:nts
-					Axx[i,iir2]*=α
-				end
-			end
-		end
-	end
-	return Ax
-end
-
-"""
-given dJdAx and A, computes dJdA
-"""
-function xcorr_grad!(dA::AbstractArray{Float64}, dAx, A::AbstractArray{Float64}, pa)
-	nr=size(A,2)
-	nt=size(A,1)
-	iref=pa.iref
-	lags=pa.paconv.slags
-	nts=sum(lags)+1
-	dA[:]=0.0
-
-	ir1=0
-	for ir in iref
-		ir1+=1
-		dAxx=dAx[ir1]
-
-		for (iir2,ir2) in enumerate(ir:nr)
-
-			for i in 1:nt
-				pa.paconv.g[i]=A[i,ir2]
-			end
-			for i in 1:nts
-				pa.paconv.s[i]=dAxx[i,iir2]
-			end
-
-			mod!(pa.paconv, :d) # check
-
-			for i in 1:nt
-				dA[i,ir]+=pa.paconv.d[i]
-			end
-		end
-
-		for i in 1:nt
-			pa.paconv.d[i]=A[i,ir]
-		end
-
-		for (iir2,ir2) in enumerate(ir:nr)
-			for i in 1:nts
-				pa.paconv.s[i]=dAxx[i,iir2]
-			end
-
-			mod!(pa.paconv, :g) # check
-			for i in 1:nt
-				dA[i,ir2] +=pa.paconv.g[i]
-			end
-		end
-	end
-	return dA
-
-end
-
-
-"""
-Convert Array{Array{Float64,2},1} to 
-Array{Float64,2} and vice versa
-"""
-function Axmatrix!(Axmat, Ax, flag)
-	nr=length(Ax);
-	nt=size(Axmat,1)
-	
-
-	nrtot=0
-	for ir in 1:nr
-		nr1=nr-ir+1
-		for irr in 1:nr1
-			Axx=Ax[ir]
-			for it in 1:nt
-				if(flag==1)
-					Axx[it,irr]=Axmat[it, nrtot+irr]
-				elseif(flag==-1)
-					Axmat[it, nrtot+irr]=Axx[it,irr]
-				end
-			end
-		end
-		nrtot+=nr1
-	end
-end
 
 end
