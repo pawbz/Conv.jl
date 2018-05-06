@@ -42,7 +42,7 @@ end
 
 function xcorr(g::AbstractArray{Float64}, pa=P_xcorr(size(g,1), size(g,2))) 
 
-	mod!(pa, :cg)
+	mod!(pa, g=g)
 
 	return pa.cg 
 end
@@ -156,7 +156,7 @@ end
 Convert Array{Array{Float64,2},1} to 
 Array{Float64,2} and vice versa
 """
-function cgmatrix!(cgmat, cg, flag)
+function cgmat!(cgmat, cg, flag)
 	nr=length(cg);
 	nt=size(cgmat,1)
 	
@@ -178,4 +178,16 @@ function cgmatrix!(cgmat, cg, flag)
 	end
 end
 
+function cgmat(cgmat::AbstractArray{Float64,2}, nr::Int)
+	nts=size(cgmat,1)
+	cg=[[nts, nr-i+1] for i in 1:nr]
+	cgmat!(cgmat, cg, 1)
+	return cg
+end
 
+function cgmat(cg::Vector{Matrix{Float64}}, nr::Int)
+	nts=size(cg[1],1)
+	cgmat=(nts,binomial(nr, 2)+nr)
+	cgmat!(cgmat, cg, -1)
+	return cgmat
+end

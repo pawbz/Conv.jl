@@ -9,7 +9,8 @@ mutable struct P_misfit_xcorr
 end
 
 
-function P_misfit_xcorr(nt, nr, pxcorr=P_xcorr(nt, nr, norm_flag=false); y=nothing, cy=nothing)
+function P_misfit_xcorr(nt::Int, nr::Int, 
+			pxcorr=P_xcorr(nt, nr, norm_flag=false); y=nothing, cy=nothing)
 
 	if(cy===nothing)
 		cy=deepcopy(pxcorr.cg) # allocate cy
