@@ -180,7 +180,7 @@ end
 
 function cgmat(cgmat::AbstractArray{Float64,2}, nr::Int)
 	nts=size(cgmat,1)
-	cg=[[nts, nr-i+1] for i in 1:nr]
+	cg=[zeros(nts, nr-i+1) for i in 1:nr]
 	cgmat!(cgmat, cg, 1)
 	return cg
 end
