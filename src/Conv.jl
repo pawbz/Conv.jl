@@ -84,7 +84,7 @@ function P_conv(;
 	if(slags===nothing)
 		# equal +ve and -ve lags for s
 		nwplags=div(nts-1,2)
-			nwnlags=nts-1-nwplags
+		nwnlags=nts-1-nwplags
 		slags=[nwplags, nwnlags]
 	end
 	if(dlags===nothing)
