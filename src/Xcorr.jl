@@ -156,38 +156,73 @@ end
 Convert Array{Array{Float64,2},1} to 
 Array{Float64,2} and vice versa
 """
-function cgmat!(cgmat, cg, flag)
+function cgmat!(cgmat, cg, flag; cg_indices::Vector{Int}=collect(1:length(cg)), 
+					cgmat_indices::Vector{Int}=collect(1:length(cg)))
 	nr=length(cg);
 	nt=size(cgmat,1)
-	
 
-	nrtot=0
-	for ir in 1:nr
-		nr1=nr-ir+1
-		for irr in 1:nr1
+	temp=zeros(nt)
+	if(flag==1)
+		for (ir,ircg) in enumerate(cg_indices)
+			nr1=nr-ir+1
 			cgx=cg[ir]
-			for it in 1:nt
-				if(flag==1)
-					cgx[it,irr]=cgmat[it, nrtot+irr]
-				elseif(flag==-1)
-					cgmat[it, nrtot+irr]=cgx[it,irr]
+			for irr in 1:nr1
+				irm1=findin(cgmat_indices, ircg)[1]
+				irm2=findin(cgmat_indices, cg_indices[ir+irr-1])[1]
+				if(irm1<=irm2)
+					igmat=sum([nr-i+1 for i in 1:irm1-1])+1+(irm2-irm1)
+					for i in eachindex(temp)
+						temp[i]=cgmat[i, igmat]
+					end
+				else
+					igmat=sum([nr-i+1 for i in 1:irm2-1])+1+(irm1-irm2)
+					for i in eachindex(temp)
+						temp[i]=cgmat[nt-i+1, igmat]
+					end
+				end
+				for i in eachindex(temp)
+					cgx[i, irr]=temp[i]
 				end
 			end
 		end
-		nrtot+=nr1
+	end
+	if(flag==-1)
+		ntot=0
+		for (ir,ircgmat) in enumerate(cgmat_indices)
+			nr1=nr-ir+1
+			for irr in 1:nr1
+				irm1=findin(cg_indices, ircgmat)[1]
+				irm2=findin(cg_indices, cgmat_indices[ir+irr-1])[1]
+				if(irm1<=irm2)
+					cgx=cg[irm1]
+					for i in eachindex(temp)
+						temp[i]=cgx[i,irm2-irm1+1]
+					end
+				else
+					cgx=cg[irm2]
+					for i in eachindex(temp)
+						temp[i]=cgx[nt-i+1,irm1-irm2+1]
+					end
+				end
+				for i in eachindex(temp)
+					cgmat[i, ntot+irr]=temp[i]
+				end
+			end
+			ntot+=nr1
+		end
 	end
 end
 
-function cgmat(cgmat::AbstractArray{Float64,2}, nr::Int)
+function cgmat(cgmat::AbstractArray{Float64,2}, nr::Int; cg_indices=collect(1:nr))
 	nts=size(cgmat,1)
 	cg=[zeros(nts, nr-i+1) for i in 1:nr]
-	cgmat!(cgmat, cg, 1)
+	cgmat!(cgmat, cg, 1, cg_indices=cg_indices)
 	return cg
 end
 
-function cgmat(cg::Vector{Matrix{Float64}}, nr::Int)
+function cgmat(cg::Vector{Matrix{Float64}}, nr::Int;cgmat_indices=collect(1:nr))
 	nts=size(cg[1],1)
 	cgmat=(nts,binomial(nr, 2)+nr)
-	cgmat!(cgmat, cg, -1)
+	cgmat!(cgmat, cg, -1, cgmat_indices=cgmat_indices)
 	return cgmat
 end

@@ -61,44 +61,52 @@ function func_grad!(dfdx,  x,  pa::P_misfit_xcorr)
 	return J
 end
 
+mutable struct P_misfit_weighted_acorr{T<:Real}
+	p_conv::Conv.P_conv{T,2,2,2}
+	ds::Matrix{Float64}
+end
 
-#=
+
+function P_misfit_weighted_acorr(nt::Int, nr::Int)
+	p_conv=P_conv(gsize=[nt,nr], dsize=[nt,nr], ssize=[2*nt-1,nr], slags=[nt-1, nt-1])
+	ds=zeros(p_conv.s)
+	return P_misfit_weighted_acorr(p_conv, ds)
+end
+
 """
 Each column of the matrix x is correlated with itself,
 the energy at non-zero las will be penalized and returned as J.
 """
-function error_acorr_weighted_norm!(dfdx, x; paconv=nothing, dfdwav=nothing)
+function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 	nt=size(x,1)
 	nr=size(x,2)
-	# create Conv mod if not preallocated
-	if(paconv===nothing)
-		paconv=Conv.Param(ntgf=nt, ntd=nt, ntwav=2*nt-1, dims=(nr,), wavlags=[nt-1, nt-1])
+
+	for i in eachindex(x)
+		pa.p_conv.g[i]=x[i]
+		pa.p_conv.d[i]=x[i]
 	end
 
-	copy!(paconv.gf,x)
-	copy!(paconv.d,x)
-
-	Conv.mod!(paconv, :wav)
-	wav=paconv.wav
+	Conv.mod!(pa.p_conv, :s)
+	s=pa.p_conv.s
 	J=0.0
 	for ir in 1:nr
-		for it in 1:size(wav,1)
-			J += (wav[it,ir]) * (wav[it,ir]) * abs((nt-it)/(nt-1))
+		for it in 1:size(s,1)
+			J += (s[it,ir]) * (s[it,ir]) * abs((nt-it)/(nt-1))
 		end
 	end
 
 	if(!(dfdx===nothing))
 
-		if(dfdwav===nothing)
-			dfdwav=zeros(paconv.wav)
+		for i in eachindex(pa.ds)
+			pa.ds[i]=0.0
 		end
 		for ir in 1:nr
-			for it in 1:size(wav,1)
-				dfdwav[it,ir] = 2.0 * (wav[it,ir]) * abs((nt-it)/(nt-1))
+			for it in 1:size(s,1)
+				pa.ds[it,ir] = 2.0 * (s[it,ir]) * abs((nt-it)/(nt-1))
 			end
 		end
 
-		Conv.mod!(paconv, :gf, gf=dfdx, wav=dfdwav)
+		Conv.mod!(pa.p_conv, :g, g=dfdx, s=pa.ds)
 
 		scale!(dfdx, 2.)
 	end
@@ -107,5 +115,3 @@ function error_acorr_weighted_norm!(dfdx, x; paconv=nothing, dfdwav=nothing)
 
 end
 
-
-=#

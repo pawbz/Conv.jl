@@ -47,14 +47,14 @@ for nw in [7, 8], nr in [20, 10], ns in [11, 10]
 
 	r[5]=1.; w[3]=1.;
 
-	Conv.mod!(s,r,w,:d)
-	Conv.mod!(s,r,wa,:s)
+	Conv.conv!(s,r,w,:d)
+	Conv.conv!(s,r,wa,:s)
 	@test w ≈ wa
 
-	Conv.mod!(s,ra,w,:g)
+	Conv.conv!(s,ra,w,:g)
 	@test ra ≈ r
 
-	Conv.mod!(sa,ra,wa,:d)
+	Conv.conv!(sa,ra,wa,:d)
 	@test sa ≈ s
 end
 
@@ -96,8 +96,8 @@ function filt_loop(func, n2; )
 end
 
 n2=128
-@time filt_loop(Conv.mod!, n2)
-@time filt_loop(Conv.mod!, n2)
+@time filt_loop(Conv.conv!, n2)
+@time filt_loop(Conv.conv!, n2)
 
 
 using BenchmarkTools
@@ -108,7 +108,7 @@ println("====================")
 d=randn(n,nr)
 g=randn(n,nr)
 s=randn(n,nr)
-pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
+pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 
 @btime Conv.mod!(pa, :d);
 @btime Conv.mod!(pa, :d, d=d, g=g);
@@ -121,7 +121,7 @@ println("====================")
 d=randn(n,nr)
 g=randn(n,nr)
 s=randn(n)
-pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n]);
+pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n]);
 
 @btime Conv.mod!(pa, :d);
 @btime Conv.mod!(pa, :d, d=d, g=g);
@@ -132,7 +132,7 @@ println("====================")
 d=randn(n,nr)
 g=randn(n,nr)
 s=randn(n,nr)
-pa=Conv.Param(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
+pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 
 @btime Conv.mod!(pa, :d);
 @btime Conv.mod!(pa, :d, d=d, g=g);
