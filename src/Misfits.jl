@@ -91,11 +91,12 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 	J=0.0
 	for ir in 1:nr
 		for it in 1:size(s,1)
-			J += (s[it,ir]) * (s[it,ir]) * abs((nt-it)/(nt-1))
+			J += (s[it,ir]) * (s[it,ir]) * inv(s[nt,ir]) * inv(s[nt,ir])  * abs((nt-it)/(nt-1))
 		end
 	end
 
 	if(!(dfdx===nothing))
+		error("incorrect grad")
 
 		for i in eachindex(pa.ds)
 			pa.ds[i]=0.0

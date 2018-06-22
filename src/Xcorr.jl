@@ -222,7 +222,7 @@ end
 
 function cgmat(cg::Vector{Matrix{Float64}}, nr::Int;cgmat_indices=collect(1:nr))
 	nts=size(cg[1],1)
-	cgmat=(nts,binomial(nr, 2)+nr)
+	cgmat=zeros(nts,binomial(nr, 2)+nr)
 	cgmat!(cgmat, cg, -1, cgmat_indices=cgmat_indices)
 	return cgmat
 end
