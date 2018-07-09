@@ -193,7 +193,7 @@ By default, the fields `g`, `d` and `s` in pa are modified accordingly.
 Otherwise use keyword arguments to input them.
 """
 function mod!(pa::P_conv, attrib::Symbol; 
-	      g=pa.g, d=pa.d, s=pa.s # external arrays to be modified
+		   g=pa.g, d=pa.d, s=pa.s # external arrays to be modified
 	     )
 
 	(attrib ∉ [:s, :d, :g]) && error("invalid attrib")
@@ -218,76 +218,74 @@ function mod!(pa::P_conv, attrib::Symbol;
 		A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
 		if(pa.dsum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
+				@inbounds pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
 			end
 		elseif(pa.ssum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
+				@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
 			end
 		elseif(pa.gsum)
 			for i in CartesianRange(size(pa.sfreq))
-				pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
+				@inbounds pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
 			end
 		else
 			for i in eachindex(pa.dfreq)
-				pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i]
+				@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i]
 			end
 		end
 		A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
 		pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
-		return d
 	elseif(attrib == :g)
 		A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
 		A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
 		conj!(pa.sfreq)
 		if(pa.dsum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
+				@inbounds pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
 			end
 		elseif(pa.ssum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
+				@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
 			end
 		elseif(pa.gsum)
 			for i in CartesianRange(size(pa.sfreq))
-				pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
+				@inbounds pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
 			end
 		else
 			for i in eachindex(pa.dfreq)
-				pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
+				@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
 			end
 		end
 #		@. pa.gfreq = pa.dfreq * pa.sfreq
 		A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
 		pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
 		
-		return g
 	elseif(attrib == :s)
 		A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
 		A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
 		conj!(pa.gfreq)
 		if(pa.dsum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
+				@inbounds pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
 			end
 		elseif(pa.ssum)
 			for i in CartesianRange(size(pa.gfreq))
-				pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
+				@inbounds pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
 			end
 		elseif(pa.gsum)
 			for i in CartesianRange(size(pa.sfreq))
-				pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
+				@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
 			end
 		else
 			for i in eachindex(pa.dfreq)
-				pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i]
+				@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i]
 			end
 		end
 		#@. pa.sfreq = pa.dfreq * pa.gfreq
 		A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
 		pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
-		return s
 	end
+	return pa
 end
 
 include("Pad.jl")

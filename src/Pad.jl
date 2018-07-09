@@ -34,25 +34,25 @@ function pad_truncate!{T}(
 			# +ve lags
 			if (nplags > 0) 
 				for i=1:nplags
-					xpow2[i+1,id]= (x[nnlags+1+i,id])
+					@inbounds xpow2[i+1,id]= (x[nnlags+1+i,id])
 				end
 			end
 			# -ve lags
 			if(nnlags != 0) 
 				for i=1:nnlags
-					xpow2[npow2-i+1,id] =(x[nnlags+1-i,id])
+					@inbounds xpow2[npow2-i+1,id] =(x[nnlags+1-i,id])
 				end
 			end
 		elseif(flag == -1)
 			x[nnlags+1,id] = (xpow2[1,id]); # zero lag
 			if(nplags != 0) 
 				for i=1:nplags
-					x[nnlags+1+i,id] = (xpow2[1+i,id]);
+					@inbounds x[nnlags+1+i,id] = (xpow2[1+i,id]);
 				end
 			end
 			if(nnlags != 0)
 				for i=1:nnlags
-					x[nnlags+1-i,id] = (xpow2[npow2-i+1,id])
+					@inbounds x[nnlags+1-i,id] = (xpow2[npow2-i+1,id])
 				end
 			end
 		else
