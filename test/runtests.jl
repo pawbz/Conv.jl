@@ -138,3 +138,50 @@ pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 @btime Conv.mod!(pa, :d, d=d, g=g);
 @btime Conv.mod!(pa, :g);
 @btime Conv.mod!(pa, :s);
+
+
+
+
+# =================================================
+# weighted norm after auto-correlation
+# =================================================
+n1=100
+n2=10
+
+x=randn(n1,n2);
+w=randn(n1,n2);
+dfdx1=similar(x);
+pa=Conv.P_misfit_weighted_acorr(n1,n2)
+
+@time Conv.func_grad!(dfdx1,x,pa)
+function func(x) 
+	xx=reshape(x,n1,n2)
+	return	Conv.func_grad!(nothing,xx,pa)
+end
+dfdx2=Calculus.gradient(func,vec(x));
+
+@test dfdx1 ≈ reshape(dfdx2,n1,n2)
+
+
+# =================================================
+# squared euclidean after after xcorr
+# =================================================
+n1=50
+n2=4
+
+x=randn(n1,n2);
+y=randn(n1,n2);
+dfdx1=similar(x);
+pa=Conv.P_misfit_xcorr(n1,n2, y=y)
+
+@time Conv.func_grad!(dfdx1,x,pa)
+function func(x) 
+	xx=reshape(x,n1,n2)
+	return	Conv.func_grad!(nothing,xx,pa)
+end
+dfdx2=Calculus.gradient(func,vec(x));
+
+@test dfdx1 ≈ reshape(dfdx2,n1,n2)
+
+
+
