@@ -1,6 +1,7 @@
 using Conv
 using Base.Test
 using BenchmarkTools
+using Calculus
 
 np=1000
 n=777
