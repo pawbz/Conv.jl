@@ -3,7 +3,6 @@ using Base.Test
 using BenchmarkTools
 using Calculus
 
-#=
 np=1000
 n=777
 n2=100
@@ -141,7 +140,6 @@ pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 @btime Conv.mod!(pa, Conv.S());
 
 
-=#
 
 
 # =================================================
