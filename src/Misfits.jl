@@ -86,7 +86,7 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 		pa.p_conv.d[i]=x[i]
 	end
 
-	Conv.mod!(pa.p_conv, :s)
+	Conv.mod!(pa.p_conv, S())
 	s=pa.p_conv.s
 	J=0.0
 	for ir in 1:nr
@@ -106,7 +106,7 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 			end
 		end
 
-		Conv.mod!(pa.p_conv, :g, g=dfdx, s=pa.ds)
+		Conv.mod!(pa.p_conv, G(), g=dfdx, s=pa.ds)
 
 		scale!(dfdx, 2.)
 	end

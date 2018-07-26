@@ -48,14 +48,14 @@ for nw in [7, 8], nr in [20, 10], ns in [11, 10]
 
 	r[5]=1.; w[3]=1.;
 
-	Conv.conv!(s,r,w,:d)
-	Conv.conv!(s,r,wa,:s)
+	Conv.conv!(s,r,w,Conv.D())
+	Conv.conv!(s,r,wa,Conv.S())
 	@test w ≈ wa
 
-	Conv.conv!(s,ra,w,:g)
+	Conv.conv!(s,ra,w,Conv.G())
 	@test ra ≈ r
 
-	Conv.conv!(sa,ra,wa,:d)
+	Conv.conv!(sa,ra,wa,Conv.D())
 	@test sa ≈ s
 end
 
@@ -72,11 +72,11 @@ function filt_loop(func, n2; )
 		r=randn(nr, n2...)
 		s=randn(ns, n2...)
 		w=randn(nw, n2...)
-		func(s,r,w,:d)
+		func(s,r,w,Conv.D())
 
 		sa=randn(ns, n2...);
 		ra=similar(r)
-		func(sa,ra,w,:g)
+		func(sa,ra,w,Conv.G())
 
 		# dot product test
 		@test dot(s, sa) ≈ dot(ra, r)
@@ -84,12 +84,12 @@ function filt_loop(func, n2; )
 		r=randn(nr, n2...)
 		s=randn(ns, n2...)
 		w=zeros(nw, n2...)
-		func(s,r,w,:s)
+		func(s,r,w,Conv.S())
 
 
 		wa=randn(nw, n2...);
 		ra=similar(r);
-		func(s,ra,wa,:g)
+		func(s,ra,wa,Conv.G())
 
 		# dot product test
 		@test dot(r, ra) ≈ dot(wa, w)
@@ -101,7 +101,6 @@ n2=128
 @time filt_loop(Conv.conv!, n2)
 
 
-using BenchmarkTools
 # check if mod! will not have any allocations
 n=10000
 nr=1
@@ -111,10 +110,10 @@ g=randn(n,nr)
 s=randn(n,nr)
 pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 
-@btime Conv.mod!(pa, :d);
-@btime Conv.mod!(pa, :d, d=d, g=g);
-@btime Conv.mod!(pa, :g);
-@btime Conv.mod!(pa, :s);
+@btime Conv.mod!(pa, Conv.D());
+@btime Conv.mod!(pa, Conv.D(), d=d, g=g);
+@btime Conv.mod!(pa, Conv.G());
+@btime Conv.mod!(pa, Conv.S());
 
 n=1000
 nr=100
@@ -124,10 +123,10 @@ g=randn(n,nr)
 s=randn(n)
 pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n]);
 
-@btime Conv.mod!(pa, :d);
-@btime Conv.mod!(pa, :d, d=d, g=g);
-@btime Conv.mod!(pa, :g);
-@btime Conv.mod!(pa, :s);
+@btime Conv.mod!(pa, Conv.D());
+@btime Conv.mod!(pa, Conv.D(), d=d, g=g);
+@btime Conv.mod!(pa, Conv.G());
+@btime Conv.mod!(pa, Conv.S());
 
 println("====================")
 d=randn(n,nr)
@@ -135,10 +134,10 @@ g=randn(n,nr)
 s=randn(n,nr)
 pa=Conv.P_conv(d=d,g=g,s=s, gsize=[n,nr], dsize=[n,nr], ssize=[n,nr]);
 
-@btime Conv.mod!(pa, :d);
-@btime Conv.mod!(pa, :d, d=d, g=g);
-@btime Conv.mod!(pa, :g);
-@btime Conv.mod!(pa, :s);
+@btime Conv.mod!(pa, Conv.D());
+@btime Conv.mod!(pa, Conv.D(), d=d, g=g);
+@btime Conv.mod!(pa, Conv.G());
+@btime Conv.mod!(pa, Conv.S());
 
 
 
@@ -154,7 +153,7 @@ w=randn(n1,n2);
 dfdx1=similar(x);
 pa=Conv.P_misfit_weighted_acorr(n1,n2)
 
-@time Conv.func_grad!(dfdx1,x,pa)
+@btime Conv.func_grad!(dfdx1,x,pa)
 function func(x) 
 	xx=reshape(x,n1,n2)
 	return	Conv.func_grad!(nothing,xx,pa)
@@ -175,7 +174,7 @@ y=randn(n1,n2);
 dfdx1=similar(x);
 pa=Conv.P_misfit_xcorr(n1,n2, y=y)
 
-@time Conv.func_grad!(dfdx1,x,pa)
+@btime Conv.func_grad!(dfdx1,x,pa)
 function func(x) 
 	xx=reshape(x,n1,n2)
 	return	Conv.func_grad!(nothing,xx,pa)

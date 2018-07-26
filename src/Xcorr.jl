@@ -83,7 +83,7 @@ function mod!(pa::P_xcorr; cg=pa.cg, g=pa.g)
 			for i in eachindex(pa.paconv.g)
 				pa.paconv.g[i]=g[i,ir2]
 			end
-			mod!(pa.paconv, :s)
+			mod!(pa.paconv, S())
 		        for i in 1:nts
 		        	cgx[i,iir2]=pa.paconv.s[i]
 		        end
@@ -124,7 +124,7 @@ function mod_grad!(dg::AbstractArray{Float64}, pa::P_xcorr; dcg=pa.cg, g=pa.g)
 				pa.paconv.s[i]=dcgx[i,iir2]
 			end
 
-			mod!(pa.paconv, :d)
+			mod!(pa.paconv, D())
 
 			for i in 1:nt
 				dg[i,ir]+=pa.paconv.d[i]
@@ -140,7 +140,7 @@ function mod_grad!(dg::AbstractArray{Float64}, pa::P_xcorr; dcg=pa.cg, g=pa.g)
 				pa.paconv.s[i]=dcgx[i,iir2]
 			end
 
-			mod!(pa.paconv, :g) 
+			mod!(pa.paconv, G()) 
 			for i in 1:nt
 				dg[i,ir2] +=pa.paconv.g[i]
 			end

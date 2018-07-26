@@ -6,14 +6,18 @@ This module is used in DeConv, ConvMix and Coupling
 module Conv
 using FFTW
 
-using DSP.nextfastfft
+using DSP: nextfastfft
 using Misfits
+
+struct D end
+struct G end
+struct S end
 
 """
 Model : d = convolution(g, s)
 d, g and s can have arbitary +ve and -ve lags
 """
-type P_conv{T<:Real, Nd, Ng, Ns}
+mutable struct P_conv{T<:Real, Nd, Ng, Ns}
 	dsize::Vector{Int}
 	gsize::Vector{Int}
 	ssize::Vector{Int}
@@ -174,8 +178,7 @@ Don't use inside loops, use `mod!` instead.
 function conv!{T,Nd,Ng,Ns}(
 	   d::AbstractArray{T,Nd}, 
 	   g::AbstractArray{T,Ng},
-	   s::AbstractArray{T,Ns}, attrib::Symbol)
-	(attrib ∉ [:s, :d, :g]) && error("invalid attrib")
+	   s::AbstractArray{T,Ns}, attrib::Union{D,G,S})
 	dsize=[size(d)...]
 	gsize=[size(g)...]
 	ssize=[size(s)...]
@@ -187,106 +190,196 @@ function conv!{T,Nd,Ng,Ns}(
 	mod!(pa, attrib)
 end
 
+function initialize_d!(pa::P_conv, d=pa.d)
+	T=eltype(pa.d)
+	pa.dfreq[:] = complex(T(0))
+	pa.dpad[:]=T(0)
+	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, 1)
+end
+
+function initialize_g!(pa::P_conv, g=pa.g)
+	T=eltype(pa.g)
+	pa.gfreq[:] = complex(T(0))
+	pa.gpad[:]=T(0)
+	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, 1)
+end
+
+
+function initialize_s!(pa::P_conv, s=pa.s)
+	T=eltype(pa.s)
+	pa.sfreq[:] = complex(T(0))
+	pa.spad[:]=T(0)
+	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, 1)
+end
+
+# initialize freq vectors
+function initialize_all!(pa::P_conv, d=pa.d, g=pa.g, s=pa.s)
+	initialize_d!(pa, d);	initialize_g!(pa, g);    initialize_s!(pa, s)
+end
+
 """
 Convolution modelling with no allocations at all.
 By default, the fields `g`, `d` and `s` in pa are modified accordingly.
 Otherwise use keyword arguments to input them.
 """
-function mod!(pa::P_conv, attrib::Symbol; 
-		   g=pa.g, d=pa.d, s=pa.s # external arrays to be modified
-	     )
-
-	(attrib ∉ [:s, :d, :g]) && error("invalid attrib")
-	T=eltype(pa.d)
-	
-	# initialize freq vectors
-	pa.dfreq[:] = complex(T(0))
-	pa.gfreq[:] = complex(T(0))
-	pa.sfreq[:] = complex(T(0))
-
-	pa.gpad[:]=T(0)
-	pa.dpad[:]=T(0)
-	pa.spad[:]=T(0)
-
-	# necessary zero padding
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, 1)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, 1)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, 1)
-
-	if(attrib == :d)
-		A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
-		A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
-		if(pa.dsum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
-			end
-		elseif(pa.ssum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
-			end
-		elseif(pa.gsum)
-			for i in CartesianRange(size(pa.sfreq))
-				@inbounds pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
-			end
-		else
-			for i in eachindex(pa.dfreq)
-				@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i]
-			end
-		end
-		A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
-		pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
-	elseif(attrib == :g)
-		A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
-		A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
-		conj!(pa.sfreq)
-		if(pa.dsum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
-			end
-		elseif(pa.ssum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
-			end
-		elseif(pa.gsum)
-			for i in CartesianRange(size(pa.sfreq))
-				@inbounds pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
-			end
-		else
-			for i in eachindex(pa.dfreq)
-				@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
-			end
-		end
-#		@. pa.gfreq = pa.dfreq * pa.sfreq
-		A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
-		pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
-		
-	elseif(attrib == :s)
-		A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
-		A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
-		conj!(pa.gfreq)
-		if(pa.dsum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
-			end
-		elseif(pa.ssum)
-			for i in CartesianRange(size(pa.gfreq))
-				@inbounds pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
-			end
-		elseif(pa.gsum)
-			for i in CartesianRange(size(pa.sfreq))
-				@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
-			end
-		else
-			for i in eachindex(pa.dfreq)
-				@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i]
-			end
-		end
-		#@. pa.sfreq = pa.dfreq * pa.gfreq
-		A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
-		pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+function mod!(pa::P_conv{T,N,N,N}, ::D; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	for i in eachindex(pa.dfreq)
+		@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i]
 	end
+	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
+	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
 	return pa
 end
+
+function mod!(pa::P_conv{T,N,N,N}, ::G; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.sfreq)
+		for i in eachindex(pa.dfreq)
+			@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
+		end
+	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
+	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	return pa
+end
+		
+function mod!(pa::P_conv{T,N,N,N}, ::S; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.gfreq)
+	for i in eachindex(pa.dfreq)
+		@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i]
+	end
+	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
+	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	return pa
+end
+
+
+
+# dsum=true
+function mod!(pa::P_conv{T,1,2,2}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
+	end
+	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
+	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	return pa
+end
+
+function mod!(pa::P_conv{T,1,2,2}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.sfreq)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
+	end
+	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
+	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	return pa
+end
+		
+function mod!(pa::P_conv{T,1,2,2}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.gfreq)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
+	end
+	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
+	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	return pa
+end
+
+# gsum=true
+function mod!(pa::P_conv{T,2,1,2}, ::D;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	for i in CartesianRange(size(pa.sfreq))
+		@inbounds pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
+	end
+	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
+	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	return pa
+end
+function mod!(pa::P_conv{T,2,1,2}, ::G;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.sfreq)
+	for i in CartesianRange(size(pa.sfreq))
+		@inbounds pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
+	end
+	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
+	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	return pa
+end
+		
+function mod!(pa::P_conv{T,2,1,2}, ::S;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.gfreq)
+	for i in CartesianRange(size(pa.sfreq))
+		@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
+	end
+	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
+	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	return pa
+end
+
+# ssum=true
+function mod!(pa::P_conv{T,2,2,1}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
+	end
+	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
+	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	return pa
+end
+function mod!(pa::P_conv{T,2,2,1}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.sfreq, pa.sfftp, pa.spad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.sfreq)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
+	end
+	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
+	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	return pa
+end
+function mod!(pa::P_conv{T,2,2,1}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
+	initialize_all!(pa, d, g, s)
+	A_mul_B!(pa.gfreq, pa.gfftp, pa.gpad)
+	A_mul_B!(pa.dfreq, pa.dfftp, pa.dpad)
+	conj!(pa.gfreq)
+	for i in CartesianRange(size(pa.gfreq))
+		@inbounds pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
+	end
+	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
+	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	return pa
+end
+
+
+
+
+
 
 include("Pad.jl")
 include("Xcorr.jl")
