@@ -44,9 +44,6 @@ mutable struct P_conv{T<:Real, Nd, Ng, Ns}
 	slags::Vector{Int}
 	"+ve and -ve lags of d"
 	dlags::Vector{Int}
-	dsum::Bool
-	gsum::Bool
-	ssum::Bool
 end
 
 function Base.fill!(pa::P_conv, k)
@@ -145,29 +142,13 @@ function P_conv(;
 	gpad=(zeros(T,np2,gsize[2:end]...))
 	spad=(zeros(T,np2,ssize[2:end]...))
 
-	dsum=false; ssum=false; gsum=false
-	if(!(dsize[2:end]==ssize[2:end]==gsize[2:end]))
-		if(Nd==1)
-			dsum=true
-			(gsize[2:end]≠ssize[2:end]) && error("dimension error")
-		elseif(Ng==1) 
-			gsum=true
-			(dsize[2:end]≠ssize[2:end]) && error("dimension error")
-		elseif(Ns==1)
-			ssum=true
-			(dsize[2:end]≠gsize[2:end]) && error("dimension error")
-		else
-			error("only vectors allowed, otherwise g, s, d should have same size")
-		end
-	end
-
 	pa=P_conv(dsize, gsize, ssize, np2, d, g, s, 
 	  dpad, gpad, spad,
 	  dfreq, gfreq, sfreq, 
 	  dfftp, difftp, 
 	  gfftp, gifftp, 
 	  sfftp, sifftp, 
-	  glags, slags, dlags, dsum, gsum, ssum)
+	  glags, slags, dlags)
 end
 
 
@@ -194,14 +175,14 @@ function initialize_d!(pa::P_conv, d=pa.d)
 	T=eltype(pa.d)
 	pa.dfreq[:] = complex(T(0))
 	pa.dpad[:]=T(0)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, 1)
+	pad!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 end
 
 function initialize_g!(pa::P_conv, g=pa.g)
 	T=eltype(pa.g)
 	pa.gfreq[:] = complex(T(0))
 	pa.gpad[:]=T(0)
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, 1)
+	pad!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 end
 
 
@@ -209,7 +190,7 @@ function initialize_s!(pa::P_conv, s=pa.s)
 	T=eltype(pa.s)
 	pa.sfreq[:] = complex(T(0))
 	pa.spad[:]=T(0)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, 1)
+	pad!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 end
 
 # initialize freq vectors
@@ -230,7 +211,7 @@ function mod!(pa::P_conv{T,N,N,N}, ::D; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real
 		@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i]
 	end
 	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 	return pa
 end
 
@@ -243,7 +224,7 @@ function mod!(pa::P_conv{T,N,N,N}, ::G; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real
 			@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
 		end
 	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 	return pa
 end
 		
@@ -256,7 +237,7 @@ function mod!(pa::P_conv{T,N,N,N}, ::S; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real
 		@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i]
 	end
 	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 	return pa
 end
 
@@ -271,7 +252,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
 	end
 	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 	return pa
 end
 
@@ -284,7 +265,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
 	end
 	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 	return pa
 end
 		
@@ -297,7 +278,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
 	end
 	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 	return pa
 end
 
@@ -310,7 +291,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::D;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
 	end
 	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 	return pa
 end
 function mod!(pa::P_conv{T,2,1,2}, ::G;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
@@ -322,7 +303,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::G;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
 	end
 	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 	return pa
 end
 		
@@ -335,7 +316,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::S;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
 	end
 	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 	return pa
 end
 
@@ -348,7 +329,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
 	end
 	A_mul_B!(pa.dpad, pa.difftp, pa.dfreq)
-	pad_truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2, -1)
+	truncate!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 	return pa
 end
 function mod!(pa::P_conv{T,2,2,1}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
@@ -360,7 +341,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
 	end
 	A_mul_B!(pa.gpad, pa.gifftp, pa.gfreq)
-	pad_truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2, -1)
+	truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 	return pa
 end
 function mod!(pa::P_conv{T,2,2,1}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
@@ -372,7 +353,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 		@inbounds pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
 	end
 	A_mul_B!(pa.spad, pa.sifftp, pa.sfreq)
-	pad_truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2, -1)
+	truncate!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 	return pa
 end
 

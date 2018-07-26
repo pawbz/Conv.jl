@@ -3,7 +3,7 @@
 Type for correlated squared Euclidean
 """
 mutable struct P_misfit_xcorr
-	pxcorr::Conv.P_xcorr
+	pxcorr::Conv.P_xcorr{Float64}
 	cy::Vector{Matrix{Float64}}
 	dcg::Vector{Matrix{Float64}}
 end
@@ -34,9 +34,7 @@ function func_grad!(dfdx,  x,  pa::P_misfit_xcorr)
 	dfdcg=pa.dcg
 
 	# copy x
-	for i in eachindex(pa.pxcorr.g)
-		pa.pxcorr.g[i]=x[i]
-	end
+	copy!(pa.pxcorr.g,x)
 
 	# mod xcorr
 	mod!(pa.pxcorr)

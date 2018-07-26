@@ -1,7 +1,7 @@
 
 
 """
-Method to perform zero padding and truncation.
+Methods to perform zero padding and truncation.
 
 # Arguments
 
@@ -14,49 +14,59 @@ Method to perform zero padding and truncation.
 * `nplags` : number of positive lags
 * `nnlags` : number of negative lags
 * `npow2` : number of samples in xpow2
-* `flag` : = 1 means xpow2 is returned using x
-	   = -1 means x is returned using xpow2
+* `pad` means xpow2 is returned using x
+* `truncate` means x is returned using xpow2
 """
-function pad_truncate!{T}(
+function pad!{T}(
 				  x::AbstractArray{T}, 
 				  xpow2::AbstractArray{T}, 
 				  nplags::Integer, 
 				  nnlags::Integer, 
 				  npow2::Integer, 
-				  flag::Integer
 				  )
 	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
 	(size(xpow2,1) ≠ npow2) && error("size xpow2")
 
 	for id in 1:size(x,2)
-		if(flag == 1)
-			xpow2[1,id] = (x[nnlags+1,id]) # zero lag
-			# +ve lags
-			if (nplags > 0) 
-				for i=1:nplags
-					@inbounds xpow2[i+1,id]= (x[nnlags+1+i,id])
-				end
+		xpow2[1,id] = (x[nnlags+1,id]) # zero lag
+		# +ve lags
+		if (nplags > 0) 
+			for i=1:nplags
+				@inbounds xpow2[i+1,id]= (x[nnlags+1+i,id])
 			end
-			# -ve lags
-			if(nnlags != 0) 
-				for i=1:nnlags
-					@inbounds xpow2[npow2-i+1,id] =(x[nnlags+1-i,id])
-				end
+		end
+		# -ve lags
+		if(nnlags != 0) 
+			for i=1:nnlags
+				@inbounds xpow2[npow2-i+1,id] =(x[nnlags+1-i,id])
 			end
-		elseif(flag == -1)
-			x[nnlags+1,id] = (xpow2[1,id]); # zero lag
-			if(nplags != 0) 
-				for i=1:nplags
-					@inbounds x[nnlags+1+i,id] = (xpow2[1+i,id]);
-				end
+		end
+	end
+	return nothing
+end
+
+
+function truncate!{T}(
+				  x::AbstractArray{T}, 
+				  xpow2::AbstractArray{T}, 
+				  nplags::Integer, 
+				  nnlags::Integer, 
+				  npow2::Integer, 
+				  )
+	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
+	(size(xpow2,1) ≠ npow2) && error("size xpow2")
+
+	for id in 1:size(x,2)
+		x[nnlags+1,id] = (xpow2[1,id]); # zero lag
+		if(nplags != 0) 
+			for i=1:nplags
+				@inbounds x[nnlags+1+i,id] = (xpow2[1+i,id]);
 			end
-			if(nnlags != 0)
-				for i=1:nnlags
-					@inbounds x[nnlags+1-i,id] = (xpow2[npow2-i+1,id])
-				end
+		end
+		if(nnlags != 0)
+			for i=1:nnlags
+				@inbounds x[nnlags+1-i,id] = (xpow2[npow2-i+1,id])
 			end
-		else
-			error("invalid flag")
 		end
 	end
 	return nothing
