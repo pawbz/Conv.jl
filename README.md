@@ -17,7 +17,7 @@ g=randn(nt,nr); s=ones(nt, nr)
 ```
 Create parameter variable and allocate memory.
 ```
-pa=Conv.Param(dsize=[nt,nr], ssize=[nt,nr], gsize=[nt,nr], g=g, s=s) #memory allocation
+pa=Conv.Param(dsize=[nt,nr], ssize=[nt,nr], gsize=[nt,nr], g=g, s=s) # memory allocation
 ```
 And finally, perform a convolution.
 ```
