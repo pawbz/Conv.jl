@@ -106,7 +106,7 @@ function P_conv(;
 	(sum(dlags)+1 ≠ size(d,1)) && error("dlags")
 	(sum(slags)+1 ≠ size(s,1)) && error("slags")
 
-	FFTW.set_num_threads(Sys.CPU_CORES)
+	FFTW.set_num_threads(Sys.CPU_THREADS)
 	nrfft=div(np2,2)+1
 
 
@@ -155,10 +155,10 @@ end
 Convolution that allocates `P_conv` internally.
 Don't use inside loops, use `mod!` instead.
 """
-function conv!{T,Nd,Ng,Ns}(
+function conv!(
 	   d::AbstractArray{T,Nd}, 
 	   g::AbstractArray{T,Ng},
-	   s::AbstractArray{T,Ns}, attrib::Union{D,G,S})
+	   s::AbstractArray{T,Ns}, attrib::Union{D,G,S}) where {T,Nd,Ng,Ns}
 	dsize=[size(d)...]
 	gsize=[size(g)...]
 	ssize=[size(s)...]
@@ -172,23 +172,23 @@ end
 
 function initialize_d!(pa::P_conv, d=pa.d)
 	T=eltype(pa.d)
-	pa.dfreq[:] = complex(T(0))
-	pa.dpad[:]=T(0)
+	fill!(pa.dfreq,complex(T(0)))
+	fill!(pa.dpad,T(0))
 	pad!(d, pa.dpad, pa.dlags[1], pa.dlags[2], pa.np2)
 end
 
 function initialize_g!(pa::P_conv, g=pa.g)
 	T=eltype(pa.g)
-	pa.gfreq[:] = complex(T(0))
-	pa.gpad[:]=T(0)
+	fill!(pa.gfreq, complex(T(0)))
+	fill!(pa.gpad,T(0))
 	pad!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 end
 
 
 function initialize_s!(pa::P_conv, s=pa.s)
 	T=eltype(pa.s)
-	pa.sfreq[:] = complex(T(0))
-	pa.spad[:]=T(0)
+	fill!(pa.sfreq, complex(T(0)))
+	fill!(pa.spad, T(0))
 	pad!(s, pa.spad, pa.slags[1], pa.slags[2], pa.np2)
 end
 
@@ -219,9 +219,9 @@ function mod!(pa::P_conv{T,N,N,N}, ::G; g=pa.g, d=pa.d, s=pa.s) where {N,T<:Real
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.sfreq)
-		for i in eachindex(pa.dfreq)
-			@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
-		end
+	for i in eachindex(pa.dfreq)
+		@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i]
+	end
 	mul!(pa.gpad, pa.gifftp, pa.gfreq)
 	truncate!(g, pa.gpad, pa.glags[1], pa.glags[2], pa.np2)
 	return pa
@@ -247,7 +247,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	initialize_all!(pa, d, g, s)
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.dfreq[i[1]] += pa.gfreq[i] * pa.sfreq[i]
 	end
 	mul!(pa.dpad, pa.difftp, pa.dfreq)
@@ -260,7 +260,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.sfreq)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.gfreq[i] = pa.dfreq[i[1]] * pa.sfreq[i]
 	end
 	mul!(pa.gpad, pa.gifftp, pa.gfreq)
@@ -273,7 +273,7 @@ function mod!(pa::P_conv{T,1,2,2}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.gfreq)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.sfreq[i] = pa.dfreq[i[1]] * pa.gfreq[i]
 	end
 	mul!(pa.spad, pa.sifftp, pa.sfreq)
@@ -286,7 +286,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::D;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	initialize_all!(pa, d, g, s)
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
-	for i in CartesianRange(size(pa.sfreq))
+	for i in CartesianIndices(size(pa.sfreq))
 		@inbounds pa.dfreq[i] = pa.gfreq[i[1]] * pa.sfreq[i]
 	end
 	mul!(pa.dpad, pa.difftp, pa.dfreq)
@@ -298,7 +298,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::G;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.sfreq)
-	for i in CartesianRange(size(pa.sfreq))
+	for i in CartesianIndices(size(pa.sfreq))
 		@inbounds pa.gfreq[i[1]] += pa.dfreq[i] * pa.sfreq[i]
 	end
 	mul!(pa.gpad, pa.gifftp, pa.gfreq)
@@ -311,7 +311,7 @@ function mod!(pa::P_conv{T,2,1,2}, ::S;  g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.gfreq)
-	for i in CartesianRange(size(pa.sfreq))
+	for i in CartesianIndices(size(pa.sfreq))
 		@inbounds pa.sfreq[i] = pa.dfreq[i] * pa.gfreq[i[1]]
 	end
 	mul!(pa.spad, pa.sifftp, pa.sfreq)
@@ -324,7 +324,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::D; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	initialize_all!(pa, d, g, s)
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.dfreq[i] = pa.gfreq[i] * pa.sfreq[i[1]]
 	end
 	mul!(pa.dpad, pa.difftp, pa.dfreq)
@@ -336,7 +336,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::G; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.sfreq, pa.sfftp, pa.spad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.sfreq)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.gfreq[i] = pa.dfreq[i] * pa.sfreq[i[1]]
 	end
 	mul!(pa.gpad, pa.gifftp, pa.gfreq)
@@ -348,7 +348,7 @@ function mod!(pa::P_conv{T,2,2,1}, ::S; g=pa.g, d=pa.d, s=pa.s) where {T<:Real}
 	mul!(pa.gfreq, pa.gfftp, pa.gpad)
 	mul!(pa.dfreq, pa.dfftp, pa.dpad)
 	conj!(pa.gfreq)
-	for i in CartesianRange(size(pa.gfreq))
+	for i in CartesianIndices(size(pa.gfreq))
 		@inbounds pa.sfreq[i[1]] += pa.dfreq[i] * pa.gfreq[i]
 	end
 	mul!(pa.spad, pa.sifftp, pa.sfreq)

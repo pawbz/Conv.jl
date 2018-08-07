@@ -17,13 +17,13 @@ Methods to perform zero padding and truncation.
 * `pad` means xpow2 is returned using x
 * `truncate` means x is returned using xpow2
 """
-function pad!{T}(
+function pad!(
 				  x::AbstractArray{T}, 
 				  xpow2::AbstractArray{T}, 
 				  nplags::Integer, 
 				  nnlags::Integer, 
 				  npow2::Integer, 
-				  )
+				  ) where {T}
 	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
 	(size(xpow2,1) ≠ npow2) && error("size xpow2")
 
@@ -46,13 +46,13 @@ function pad!{T}(
 end
 
 
-function truncate!{T}(
+function truncate!(
 				  x::AbstractArray{T}, 
 				  xpow2::AbstractArray{T}, 
 				  nplags::Integer, 
 				  nnlags::Integer, 
 				  npow2::Integer, 
-				  )
+				  ) where {T}
 	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
 	(size(xpow2,1) ≠ npow2) && error("size xpow2")
 

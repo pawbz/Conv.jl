@@ -1,7 +1,8 @@
 using Conv
-using Base.Test
+using Test
 using BenchmarkTools
 using Calculus
+using LinearAlgebra
 
 np=1000
 n=777
@@ -10,7 +11,7 @@ x = randn(n,n2); xa = similar(x)
 z = zeros(np,n2);
 
 # cover all lags for serial mode
-@time for i in [0, 2, 4, n-1]
+for i in [0, 2, 4, n-1]
 	Conv.pad!(x, z, n-i-1,i,np)
 	Conv.truncate!(xa, z, n-i-1,i,np)
 	@test x ≈ xa
@@ -26,9 +27,9 @@ np=1000
 n=777
 x = randn(n); xa = similar(x)
 z = zeros(np);
-@time for i in [0, 2, 4, n-1]
-	Conv.pad!(x, z, n-i-1,i,np)
-	Conv.truncate!(xa, z, n-i-1,i,np)
+for i in [0, 2, 4, n-1]
+	@time Conv.pad!(x, z, n-i-1,i,np)
+	@time Conv.truncate!(xa, z, n-i-1,i,np)
 	@test x ≈ xa
 end
 i=4
@@ -161,6 +162,8 @@ end
 dfdx2=Calculus.gradient(func,vec(x));
 
 @test dfdx1 ≈ reshape(dfdx2,n1,n2)
+
+
 
 
 # =================================================

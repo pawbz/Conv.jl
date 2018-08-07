@@ -20,9 +20,7 @@ function P_misfit_xcorr(nt::Int, nr::Int,
 		Conv.mod!(pxcorr, cg=cy, g=y)
 	end
 	dcg=deepcopy(pxcorr.cg)
-	for i in eachindex(dcg)
-		dcg[i][:]=0.0
-	end
+	fill!.(dcg, 0.0)
 	return P_misfit_xcorr(pxcorr, cy, dcg)
 end
 
@@ -34,7 +32,7 @@ function func_grad!(dfdx,  x,  pa::P_misfit_xcorr)
 	dfdcg=pa.dcg
 
 	# copy x
-	copy!(pa.pxcorr.g,x)
+	copyto!(pa.pxcorr.g,x)
 
 	# mod xcorr
 	mod!(pa.pxcorr)
@@ -67,7 +65,7 @@ end
 
 function P_misfit_weighted_acorr(nt::Int, nr::Int)
 	p_conv=P_conv(gsize=[nt,nr], dsize=[nt,nr], ssize=[2*nt-1,nr], slags=[nt-1, nt-1])
-	ds=zeros(p_conv.s)
+	ds=zero(p_conv.s)
 	return P_misfit_weighted_acorr(p_conv, ds)
 end
 
@@ -79,10 +77,8 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 	nt=size(x,1)
 	nr=size(x,2)
 
-	for i in eachindex(x)
-		pa.p_conv.g[i]=x[i]
-		pa.p_conv.d[i]=x[i]
-	end
+	copyto!(pa.p_conv.g,x)
+	copyto!(pa.p_conv.d,x)
 
 	Conv.mod!(pa.p_conv, S())
 	s=pa.p_conv.s
@@ -94,10 +90,7 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 	end
 
 	if(!(dfdx===nothing))
-
-		for i in eachindex(pa.ds)
-			pa.ds[i]=0.0
-		end
+		fill!(pa.ds, 0.0)
 		for ir in 1:nr
 			for it in 1:size(s,1)
 				pa.ds[it,ir] = 2.0 * (s[it,ir]) * abs2((nt-it)/(nt-1))
@@ -106,7 +99,7 @@ function func_grad!(dfdx, x, pa::P_misfit_weighted_acorr)
 
 		Conv.mod!(pa.p_conv, G(), g=dfdx, s=pa.ds)
 
-		scale!(dfdx, 2.)
+		rmul!(dfdx, 2.)
 	end
 
 	return J
