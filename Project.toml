@@ -1,5 +1,6 @@
 name = "Conv"
 uuid = "eca63721-1f9a-5e79-b7ed-eda27904149e"
+version = 0.0.0
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
