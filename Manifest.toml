@@ -8,10 +8,10 @@ version = "0.3.2"
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[BenchmarkTools]]
-deps = ["Compat", "JSON", "Statistics"]
-git-tree-sha1 = "38c5dc94e4d07c3b39fe4b9d8c72d9ddfc89bb91"
+deps = ["JSON", "Pkg", "Printf", "Statistics", "Test"]
+git-tree-sha1 = "623941d5eb10e440eb12c97183f96f2f0191d0ca"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "0.3.2"
+version = "0.4.0"
 
 [[BinDeps]]
 deps = ["Compat", "Libdl", "SHA", "URIParser"]
@@ -45,9 +45,9 @@ version = "1.0.1"
 
 [[Conda]]
 deps = ["Compat", "JSON", "VersionParsing"]
-git-tree-sha1 = "b76a441539d66a18ba34df28d34dc5b9202164a3"
+git-tree-sha1 = "a47f9a2c7b80095e6a935536795635522fe27f5d"
 uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
-version = "1.0.0"
+version = "1.0.1"
 
 [[DSP]]
 deps = ["AbstractFFTs", "Compat", "FFTW", "LinearAlgebra", "Polynomials", "Reexport", "SpecialFunctions"]
@@ -83,25 +83,25 @@ version = "0.0.7"
 
 [[Distances]]
 deps = ["LinearAlgebra", "Pkg", "Printf", "Random", "Statistics", "Test"]
-git-tree-sha1 = "617f996c37ecb3436e3d4102b39025fbb38f30af"
+git-tree-sha1 = "2f38605722542f1c0a32dd2856fb529d8c226c69"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
-version = "0.7.2"
+version = "0.7.3"
 
 [[Distributed]]
 deps = ["LinearAlgebra", "Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[FFTW]]
-deps = ["AbstractFFTs", "BinaryProvider", "Compat", "Conda", "Libdl", "LinearAlgebra", "Reexport", "Test"]
-git-tree-sha1 = "60346335ad3aa60bfbdc358c6d1468bffbcff071"
+deps = ["AbstractFFTs", "BinaryProvider", "Compat", "Conda", "Libdl", "LinearAlgebra", "Pkg", "Reexport", "Test"]
+git-tree-sha1 = "29cda58afbf62f35b1a094882ad6c745a47b2eaa"
 uuid = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-version = "0.2.3"
+version = "0.2.4"
 
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "InteractiveUtils", "LinearAlgebra", "NaNMath", "Pkg", "Random", "SparseArrays", "SpecialFunctions", "StaticArrays", "Test"]
-git-tree-sha1 = "4a5e47a9cbae41414c8c1272686da3c374470d2d"
+git-tree-sha1 = "34abc9c9650a3a661b7c2cbc685825d5e58bf074"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.8.1"
+version = "0.8.4"
 
 [[InteractiveUtils]]
 deps = ["LinearAlgebra", "Markdown"]
@@ -132,11 +132,11 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[Misfits]]
 deps = ["BenchmarkTools", "Calculus", "Distances", "ForwardDiff", "LinearAlgebra", "StatsBase", "Test"]
-git-tree-sha1 = "24a4d1b6dd9fde03d5ffff394b57633050afdb8c"
+git-tree-sha1 = "cf0c26d8d4140d8d8a4e8842bfeab2d34cb042b8"
 repo-rev = "master"
 repo-url = "https://github.com/pawbz/Misfits.jl.git"
 uuid = "b5bed6b1-4eab-585a-ab29-0604291a8c0e"
-version = "1.0.0"
+version = "0.0.0"
 
 [[Missings]]
 deps = ["Compat"]
@@ -158,10 +158,10 @@ deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUID
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[Polynomials]]
-deps = ["Compat"]
-git-tree-sha1 = "23d095b4c1ecbacd78bb0eea6b85d6e0872ce3bd"
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "af883752c4935425a3ab30031a2069254c451b8b"
 uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
-version = "0.4.0"
+version = "0.5.0"
 
 [[Printf]]
 deps = ["Unicode"]
@@ -206,15 +206,15 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
 deps = ["BinDeps", "BinaryProvider", "Compat", "Libdl"]
-git-tree-sha1 = "1cf00baba50536d254f02082c90b98d6e4e1f968"
+git-tree-sha1 = "d12f8917be3782f4b800ba16003b8d0d4858c2e5"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "0.6.0"
+version = "0.7.0"
 
 [[StaticArrays]]
 deps = ["InteractiveUtils", "LinearAlgebra", "Random", "Statistics", "Test"]
-git-tree-sha1 = "d998a83bc2cd507e12b08203e7523f2e60ac9ee6"
+git-tree-sha1 = "d432c79bef174a830304f8601427a4357dfdbfb7"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "0.8.2"
+version = "0.8.3"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -222,9 +222,9 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[StatsBase]]
 deps = ["DataStructures", "LinearAlgebra", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "Test"]
-git-tree-sha1 = "515d9c751bc96f9680a2a19f76395ae8ac06a8f5"
+git-tree-sha1 = "723193a13e8078cec6dcd0b8fe245c8bfd81690e"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.24.0"
+version = "0.25.0"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
