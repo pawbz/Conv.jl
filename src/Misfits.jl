@@ -2,10 +2,10 @@
 """
 Type for correlated squared Euclidean
 """
-mutable struct P_misfit_xcorr
-	pxcorr::Conv.P_xcorr{Float64}
-	cy::Vector{Matrix{Float64}}
-	dcg::Vector{Matrix{Float64}}
+mutable struct P_misfit_xcorr{T<:Real}
+	pxcorr::Conv.P_xcorr{T}
+	cy::Vector{Matrix{T}}
+	dcg::Vector{Matrix{T}}
 end
 
 

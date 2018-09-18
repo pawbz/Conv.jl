@@ -56,29 +56,25 @@ end
 
 
 
-function P_conv(; 
+function P_conv(T=Float64; 
 	       dsize::Vector{Int64}=[1],
 	       ssize::Vector{Int64}=[1],
 	       gsize::Vector{Int64}=[1],
-	       d=zeros(dsize...), 
-	       s=zeros(ssize...),
-	       g=zeros(gsize...),
+	       d=zeros(T,dsize...), 
+	       s=zeros(T,ssize...),
+	       g=zeros(T,gsize...),
 	       slags=nothing, 
 	       dlags=nothing, 
 	       glags=nothing,
 	       np2=nextfastfft(maximum([2*dsize[1], 2*gsize[1], 2*ssize[1]])), # fft dimension for plan
 	       fftwflag=FFTW.ESTIMATE
-	      )
+	       ) 
 	Nd=length(dsize)
 	Ns=length(ssize)
 	Ng=length(gsize)
 	nts=ssize[1]
 	ntg=gsize[1]
 	ntd=dsize[1]
-
-	(eltype(d) ≠ eltype(s) ≠ eltype(g)) && error("type error")
-	T=eltype(d)
-
 
 	# default lags
 	if(slags===nothing)

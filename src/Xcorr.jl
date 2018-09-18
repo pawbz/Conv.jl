@@ -13,7 +13,7 @@ mutable struct P_xcorr{T<:Real}
 	norm_flag::Bool
 end
 
-function P_xcorr(nt::Int64, nr::Int64; 
+function P_xcorr(nt::Int64, nr::Int64, T=Float64; 
 		 cg_indices::Vector{Int64}=collect(1:nr), 
 		 cglags=[nt-1, nt-1], 
 		 norm_flag=true)
@@ -40,7 +40,7 @@ function P_xcorr(nt::Int64, nr::Int64;
 	return pa
 end
 
-function xcorr(g::AbstractArray{Float64}, pa=P_xcorr(size(g,1), size(g,2))) 
+function xcorr(g::AbstractArray, pa=P_xcorr(size(g,1), size(g,2), eltype(g))) 
 
 	mod!(pa, g=g)
 
@@ -100,7 +100,7 @@ end
 """
 given dJdcg and g, computes dJdg
 """
-function mod_grad!(dg::AbstractArray{Float64}, pa::P_xcorr; dcg=pa.cg, g=pa.g)
+function mod_grad!(dg::AbstractArray{T}, pa::P_xcorr{T}; dcg=pa.cg, g=pa.g) where {T}
 	nr=size(g,2)
 	nt=size(g,1)
 	cg_indices=pa.cg_indices
@@ -153,8 +153,8 @@ end
 
 
 """
-Convert Array{Array{Float64,2},1} to 
-Array{Float64,2} and vice versa
+Convert Array{Array{Float,2},1} to 
+Array{Float,2} and vice versa
 """
 function cgmat!(cgmat, cg, flag; cg_indices::Vector{Int}=collect(1:length(cg)), 
 					cgmat_indices::Vector{Int}=collect(1:length(cg)))
@@ -167,8 +167,8 @@ function cgmat!(cgmat, cg, flag; cg_indices::Vector{Int}=collect(1:length(cg)),
 			nr1=nr-ir+1
 			cgx=cg[ir]
 			for irr in 1:nr1
-				irm1=findin(cgmat_indices, ircg)[1]
-				irm2=findin(cgmat_indices, cg_indices[ir+irr-1])[1]
+				irm1=findall(in(ircg), cgmat_indices)[1]
+				irm2=findall(in(cg_indices[ir+irr-1]), cgmat_indices)[1]
 				if(irm1<=irm2)
 					igmat=sum([nr-i+1 for i in 1:irm1-1])+1+(irm2-irm1)
 					for i in eachindex(temp)
@@ -191,8 +191,8 @@ function cgmat!(cgmat, cg, flag; cg_indices::Vector{Int}=collect(1:length(cg)),
 		for (ir,ircgmat) in enumerate(cgmat_indices)
 			nr1=nr-ir+1
 			for irr in 1:nr1
-				irm1=findin(cg_indices, ircgmat)[1]
-				irm2=findin(cg_indices, cgmat_indices[ir+irr-1])[1]
+				irm1=findall(in(ircgmat), cg_indices)[1]
+				irm2=findall(in(cgmat_indices[ir+irr-1]), cg_indices)[1]
 				if(irm1<=irm2)
 					cgx=cg[irm1]
 					for i in eachindex(temp)
@@ -213,14 +213,14 @@ function cgmat!(cgmat, cg, flag; cg_indices::Vector{Int}=collect(1:length(cg)),
 	end
 end
 
-function cgmat(cgmat::AbstractArray{Float64,2}, nr::Int; cg_indices=collect(1:nr))
+function cgmat(cgmat::AbstractMatrix, nr::Int; cg_indices=collect(1:nr))
 	nts=size(cgmat,1)
 	cg=[zeros(nts, nr-i+1) for i in 1:nr]
 	cgmat!(cgmat, cg, 1, cg_indices=cg_indices)
 	return cg
 end
 
-function cgmat(cg::Vector{Matrix{Float64}}, nr::Int;cgmat_indices=collect(1:nr))
+function cgmat(cg::Vector{Matrix}, nr::Int;cgmat_indices=collect(1:nr))
 	nts=size(cg[1],1)
 	cgmat=zeros(nts,binomial(nr, 2)+nr)
 	cgmat!(cgmat, cg, -1, cgmat_indices=cgmat_indices)
