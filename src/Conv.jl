@@ -3,6 +3,7 @@ This module is used in DeConv, ConvMix and Coupling
 """
 module Conv
 using FFTW
+using DSP
 using LinearAlgebra
 
 using DSP: nextfastfft
@@ -66,7 +67,7 @@ function P_conv(T=Float64;
 	       slags=nothing, 
 	       dlags=nothing, 
 	       glags=nothing,
-	       np2=nextfastfft(maximum([2*dsize[1], 2*gsize[1], 2*ssize[1]])), # fft dimension for plan
+	       np2=nextfastfft(ssize[1]+gsize[1]-1), # fft dimension for plan, such that circular convolution is same as linear convolution
 	       fftwflag=FFTW.ESTIMATE
 	       ) 
 	Nd=length(dsize)
@@ -154,13 +155,17 @@ Don't use inside loops, use `mod!` instead.
 function conv!(
 	   d::AbstractArray{T,Nd}, 
 	   g::AbstractArray{T,Ng},
-	   s::AbstractArray{T,Ns}, attrib::Union{D,G,S}) where {T,Nd,Ng,Ns}
+	   s::AbstractArray{T,Ns}, attrib::Union{D,G,S};
+	       slags=nothing, 
+	       dlags=nothing, 
+	       glags=nothing,
+	   ) where {T,Nd,Ng,Ns}
 	dsize=[size(d)...]
 	gsize=[size(g)...]
 	ssize=[size(s)...]
 
 	# allocation of freq matrices
-	pa=P_conv(dsize=dsize, ssize=ssize, gsize=gsize, g=g, s=s, d=d)
+	pa=P_conv(dsize=dsize, ssize=ssize, gsize=gsize, g=g, s=s, d=d, slags=slags, dlags=dlags,glags=glags)
 
 	# using pa, return d, g, s according to attrib
 	mod!(pa, attrib)
