@@ -5,6 +5,7 @@ module Conv
 using FFTW
 using DSP
 using LinearAlgebra
+using LinearMaps
 
 using DSP: nextfastfft
 using Misfits
@@ -13,6 +14,7 @@ struct D end
 struct G end
 struct S end
 
+export P_conv
 """
 Model : d = convolution(g, s)
 d, g and s can have arbitary +ve and -ve lags
@@ -70,6 +72,10 @@ function P_conv(T=Float64;
 	       np2=nextfastfft(ssize[1]+gsize[1]-1), # fft dimension for plan, such that circular convolution is same as linear convolution
 	       fftwflag=FFTW.ESTIMATE
 	       ) 
+	@assert size(s) == tuple(ssize...)
+	@assert size(g) == tuple(gsize...)
+	@assert size(d) == tuple(dsize...)
+
 	Nd=length(dsize)
 	Ns=length(ssize)
 	Ng=length(gsize)
@@ -362,9 +368,11 @@ end
 
 
 
+include("operators.jl")
 include("Pad.jl")
 include("Xcorr.jl")
 include("Misfits.jl")
+include("getprop.jl")
 
 
 end
