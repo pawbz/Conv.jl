@@ -24,8 +24,8 @@ function pad!(
 				  nnlags::Integer, 
 				  npow2::Integer, 
 				  ) where {T}
-	(size(x,1) ≠ nplags + nnlags + 1) && error("size x")
-	(size(xpow2,1) ≠ npow2) && error("size xpow2")
+	@assert size(x,1) == nplags + nnlags + 1
+	@assert size(xpow2,1) == npow2
 
 	for id in 1:size(x,2)
 		xpow2[1,id] = (x[nnlags+1,id]) # zero lag

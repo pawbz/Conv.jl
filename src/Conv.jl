@@ -365,6 +365,7 @@ end
 include("Pad.jl")
 include("Xcorr.jl")
 include("Misfits.jl")
+include("getprop.jl")
 
 
 end
